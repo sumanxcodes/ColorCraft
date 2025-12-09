@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:colorcraft_kids/features/auth/presentation/router/app_router.dart';
 
-class ColorCraftApp extends StatelessWidget {
+class ColorCraftApp extends ConsumerWidget {
   const ColorCraftApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+
+    return MaterialApp.router(
       title: 'ColorCraft Kids',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
+        fontFamily: 'Quicksand',
       ),
-      home: const Scaffold(
-        body: Center(
-          child: Text('Welcome to ColorCraft Kids!'),
-        ),
-      ),
+      routerConfig: router,
     );
   }
 }
