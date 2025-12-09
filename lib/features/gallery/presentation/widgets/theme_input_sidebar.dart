@@ -1,13 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/constants/dimensions.dart';
+import '../../../../features/generation/presentation/providers/generation_provider.dart';
 
-class ThemeInputSidebar extends StatelessWidget {
+class ThemeInputSidebar extends ConsumerStatefulWidget {
   const ThemeInputSidebar({super.key});
 
   @override
+  ConsumerState<ThemeInputSidebar> createState() => _ThemeInputSidebarState();
+}
+
+class _ThemeInputSidebarState extends ConsumerState<ThemeInputSidebar> {
+  final _themeController = TextEditingController();
+  final _nameController = TextEditingController();
+
+  @override
+  void dispose() {
+    _themeController.dispose();
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _generate() {
+    final theme = _themeController.text.trim();
+    if (theme.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a theme!')));
+      return;
+    }
+
+    final name = _nameController.text.trim();
+    ref.read(generationProvider.notifier).createMagicPages(theme, name);
+  }
+
+  void _setTheme(String theme) {
+    _themeController.text = theme;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final generationState = ref.watch(generationProvider);
+    final isLoading = generationState.isLoading;
+
     return Container(
       width: AppDimensions.sidebarWidth,
       decoration: const BoxDecoration(
@@ -81,6 +118,8 @@ class ThemeInputSidebar extends StatelessWidget {
           ),
           const SizedBox(height: AppDimensions.p12),
           TextField(
+            controller: _themeController,
+            enabled: !isLoading,
             decoration: InputDecoration(
               hintText: 'e.g. A magical forest...',
               prefixIcon: const Padding(
@@ -131,6 +170,8 @@ class ThemeInputSidebar extends StatelessWidget {
           ),
           const SizedBox(height: AppDimensions.p8),
           TextField(
+            controller: _nameController,
+            enabled: !isLoading,
             decoration: InputDecoration(
               hintText: 'e.g. Emma',
               prefixIcon: const Padding(
@@ -186,7 +227,9 @@ class ThemeInputSidebar extends StatelessWidget {
           Container(
             height: AppDimensions.buttonHeight,
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              gradient: isLoading
+                  ? const LinearGradient(colors: [Colors.grey, Colors.grey])
+                  : AppColors.primaryGradient,
               borderRadius: BorderRadius.circular(AppDimensions.r24),
               boxShadow: [
                 BoxShadow(
@@ -199,22 +242,32 @@ class ThemeInputSidebar extends StatelessWidget {
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: () {
-                  // TODO: Implement generation flow
-                },
+                onTap: isLoading ? null : _generate,
                 borderRadius: BorderRadius.circular(AppDimensions.r24),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    FaIcon(
-                      FontAwesomeIcons.solidStar,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                    SizedBox(width: AppDimensions.p8),
+                    if (isLoading)
+                      const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    else
+                      const FaIcon(
+                        FontAwesomeIcons.solidStar,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+
+                    const SizedBox(width: AppDimensions.p8),
+
                     Text(
-                      'Create Magic Pages!',
-                      style: TextStyle(
+                      isLoading ? 'Creating Magic...' : 'Create Magic Pages!',
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -237,9 +290,7 @@ class ThemeInputSidebar extends StatelessWidget {
       backgroundColor: Colors.white,
       side: const BorderSide(color: AppColors.borderMedium),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      onPressed: () {
-        // TODO: Populate prompt
-      },
+      onPressed: () => _setTheme(label),
     );
   }
 }
