@@ -20,7 +20,7 @@ class GenerationRepository {
     }
 
     final model = GenerativeModel(
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash-exp',
       apiKey: apiKey,
       generationConfig: GenerationConfig(
         temperature: 0.9,
