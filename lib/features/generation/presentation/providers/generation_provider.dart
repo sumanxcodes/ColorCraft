@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/generation_repository.dart';
 import '../../data/services/api_key_service.dart';
@@ -13,9 +14,9 @@ final generationRepositoryProvider = Provider((ref) {
 });
 
 // AsyncNotifier: Manages the state of generated images
-class GenerationController extends AsyncNotifier<List<String>> {
+class GenerationController extends AsyncNotifier<List<Uint8List>> {
   @override
-  FutureOr<List<String>> build() {
+  FutureOr<List<Uint8List>> build() {
     return [];
   }
 
@@ -33,16 +34,16 @@ class GenerationController extends AsyncNotifier<List<String>> {
 
       if (prompts.isEmpty) return [];
 
-      // 2. Generate Images (Phase 2 - Mock/Placeholder)
+      // 2. Generate Image (Phase 2 - Real API call)
       // Taking the first prompt to generate one image for now.
-      final imageUrl = await repository.generateImage(prompts.first);
+      final imageBytes = await repository.generateImage(prompts.first);
 
-      return [imageUrl];
+      return [imageBytes];
     });
   }
 }
 
 final generationProvider =
-    AsyncNotifierProvider<GenerationController, List<String>>(() {
+    AsyncNotifierProvider<GenerationController, List<Uint8List>>(() {
       return GenerationController();
     });

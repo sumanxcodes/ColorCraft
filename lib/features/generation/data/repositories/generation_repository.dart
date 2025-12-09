@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../services/api_key_service.dart';
 
@@ -68,15 +70,83 @@ Example format:
     }
   }
 
-  // Phase 2: Generate Image (Stub/Placeholder for now)
-  // In a real app, this would call Stability AI or DALL-E
-  Future<String> generateImage(String prompt) async {
-    // Simulating API latency
-    await Future.delayed(const Duration(seconds: 3));
+  // Phase 2: Generate Image with Two-Tiered Logic
+  Future<Uint8List> generateImage(String prompt) async {
+    final apiKey = await _apiKeyService.getApiKey();
+    if (apiKey == null) throw Exception('API Key not found');
 
-    // Return a placeholder URL or a mock asset path
-    // For now, let's return a specific Unsplash URL that looks like a coloring page
-    // or just a placeholder to prove the flow.
-    return 'https://images.unsplash.com/photo-1544376798-89aa6b82c6cd?q=80&w=1000&auto=format&fit=crop';
+    try {
+      // 1. Try Primary Model (Pro - High Res)
+      return await _callImageGenerationApi(
+        apiKey: apiKey,
+        modelName: 'gemini-3-pro-image-preview',
+        prompt: prompt,
+        aspectRatio: '3:4', // Portrait
+        sampleCount: 1,
+      );
+    } catch (e) {
+      if (e.toString().contains('403') ||
+          e.toString().contains('PermissionDenied')) {
+        // 2. Fallback to Flash (Low Res) on Permission Error
+        return await _callImageGenerationApi(
+          apiKey: apiKey,
+          modelName: 'gemini-2.5-flash-image',
+          prompt: prompt,
+          aspectRatio:
+              '1:1', // Flash might not support all aspect ratios, defaulting safe
+          sampleCount: 1,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<Uint8List> _callImageGenerationApi({
+    required String apiKey,
+    required String modelName,
+    required String prompt,
+    required String aspectRatio,
+    required int sampleCount,
+  }) async {
+    final url = Uri.parse(
+      'https://generativelanguage.googleapis.com/v1beta/models/$modelName:predict',
+    );
+
+    final headers = {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    };
+
+    final body = jsonEncode({
+      'instances': [
+        {
+          'prompt':
+              'High quality coloring page for kids. $prompt. Black and white line art, no shading, white background.',
+        },
+      ],
+      'parameters': {
+        'sampleCount': sampleCount,
+        // Pro model specific config
+        if (modelName.contains('pro')) 'aspectRatio': aspectRatio,
+      },
+    });
+
+    final response = await http.post(url, headers: headers, body: body);
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      // Parse response. Structure varies but typically:
+      // { "predictions": [ { "bytesBase64Encoded": "..." } ] }
+      final predictions = json['predictions'] as List;
+      if (predictions.isNotEmpty) {
+        final base64Image = predictions[0]['bytesBase64Encoded'] as String;
+        return base64Decode(base64Image);
+      }
+      throw Exception('No image data in response');
+    } else {
+      throw Exception(
+        'Image Gen Failed: ${response.statusCode} - ${response.body}',
+      );
+    }
   }
 }

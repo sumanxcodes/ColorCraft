@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -140,8 +141,8 @@ class GalleryGrid extends ConsumerWidget {
                   ),
                   itemCount: images.length,
                   itemBuilder: (context, index) {
-                    final imageUrl = images[index];
-                    return _buildImageCard(imageUrl, index);
+                    final imageBytes = images[index];
+                    return _buildImageCard(imageBytes, index);
                   },
                 );
               },
@@ -152,7 +153,7 @@ class GalleryGrid extends ConsumerWidget {
     );
   }
 
-  Widget _buildImageCard(String imageUrl, int index) {
+  Widget _buildImageCard(Uint8List imageBytes, int index) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -175,13 +176,9 @@ class GalleryGrid extends ConsumerWidget {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(17),
               ),
-              child: Image.network(
-                imageUrl,
+              child: Image.memory(
+                imageBytes,
                 fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return const Center(child: CircularProgressIndicator());
-                },
                 errorBuilder: (context, error, stackTrace) {
                   return const Center(
                     child: FaIcon(
